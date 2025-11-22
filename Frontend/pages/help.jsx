@@ -82,7 +82,7 @@ const Help = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <a href="#" className="p-4 border border-neutral-200 rounded-lg hover:border-primary transition-colors">
             <p className="font-medium text-neutral-900">User Guide</p>
-            <p className="text-sm text-neutral-600">Complete guide to using Comet IMS</p>
+            <p className="text-sm text-neutral-600">Complete guide to using StockMaster</p>
           </a>
           <a href="#" className="p-4 border border-neutral-200 rounded-lg hover:border-primary transition-colors">
             <p className="font-medium text-neutral-900">API Documentation</p>

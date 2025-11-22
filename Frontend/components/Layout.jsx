@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import Image from 'next/image';
 import { useAuth } from '@lib/auth-context';
 import { ROLES, ROLE_PERMISSIONS } from '@lib/constants';
 import {
@@ -88,10 +89,20 @@ const Layout = ({ children }) => {
         {/* Logo */}
         <div className="p-6 border-b border-neutral-200">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">C</span>
-            </div>
-            {sidebarOpen && <span className="font-bold text-lg text-neutral-900">Comet</span>}
+            <Image 
+              src="/Logo.png" 
+              alt="StockMaster Logo" 
+              width={40} 
+              height={40}
+              className="rounded-lg"
+              priority
+            />
+            {sidebarOpen && (
+              <div>
+                <span className="font-bold text-lg text-neutral-900">StockMaster</span>
+                <p className="text-xs text-neutral-500">IMS</p>
+              </div>
+            )}
           </Link>
         </div>
 
@@ -131,13 +142,13 @@ const Layout = ({ children }) => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
         <header className="bg-white border-b border-neutral-200 px-6 py-4 flex items-center justify-between shadow-sm">
-          <div className="flex-1 max-w-md">
+          <div className="flex-1 max-w-xl">
             <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
+              <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400" />
               <input
                 type="text"
-                placeholder="Search products, orders..."
-                className="input pl-10"
+                placeholder="Search products, orders, receipts..."
+                className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-neutral-900 placeholder-neutral-400 transition-all"
               />
             </div>
           </div>
@@ -170,6 +181,15 @@ const Layout = ({ children }) => {
                   <Link
                     href="/settings"
                     className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 first:rounded-t-lg"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <Settings size={16} className="inline mr-2" />
+                    My Profile
+                  </Link>
+                  <Link
+                    href="/settings"
+                    className="block px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+                    onClick={() => setUserMenuOpen(false)}
                   >
                     <Settings size={16} className="inline mr-2" />
                     Settings

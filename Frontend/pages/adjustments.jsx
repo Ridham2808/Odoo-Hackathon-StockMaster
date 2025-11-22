@@ -26,12 +26,23 @@ const Adjustments = () => {
         setLoading(true);
         setError(null);
         const response = await api.get('/movements?type=ADJUSTMENT');
-        if (response.data) {
-          setAdjustments(response.data);
+        console.log('Adjustments response:', response.data);
+        
+        // Backend returns { ok: true, data: [...], meta: {...} }
+        // api.js returns response.data, so response is the backend response object
+        let adjustmentsList = [];
+        if (response?.ok && Array.isArray(response?.data)) {
+          adjustmentsList = response.data;
+        } else if (Array.isArray(response)) {
+          adjustmentsList = response;
+        } else if (response?.data && Array.isArray(response.data)) {
+          adjustmentsList = response.data;
         }
+        
+        setAdjustments(adjustmentsList);
       } catch (error) {
         console.error('Failed to fetch adjustments:', error);
-        setError('Failed to load adjustments');
+        setError('Failed to load adjustments. Please try again.');
       } finally {
         setLoading(false);
       }

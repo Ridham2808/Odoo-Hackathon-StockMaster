@@ -10,6 +10,7 @@ const NewReceipt = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [loadingData, setLoadingData] = useState(true);
   const [locations, setLocations] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -31,17 +32,55 @@ const NewReceipt = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoadingData(true);
         const [locRes, suppRes, prodRes] = await Promise.all([
           api.get('/locations'),
           api.get('/suppliers'),
           api.get('/products'),
         ]);
-        setLocations(locRes.data || []);
-        setSuppliers(suppRes.data || []);
-        setProducts(prodRes.data || []);
+        
+        // Parse locations - api.js returns response.data, so response is the backend response object
+        let locationsList = [];
+        if (locRes?.ok && Array.isArray(locRes?.data)) {
+          locationsList = locRes.data;
+        } else if (Array.isArray(locRes)) {
+          locationsList = locRes;
+        } else if (locRes?.data && Array.isArray(locRes.data)) {
+          locationsList = locRes.data;
+        }
+        
+        // Parse suppliers
+        let suppliersList = [];
+        if (suppRes?.ok && Array.isArray(suppRes?.data)) {
+          suppliersList = suppRes.data;
+        } else if (Array.isArray(suppRes)) {
+          suppliersList = suppRes;
+        } else if (suppRes?.data && Array.isArray(suppRes.data)) {
+          suppliersList = suppRes.data;
+        }
+        
+        // Parse products
+        let productsList = [];
+        if (prodRes?.ok && Array.isArray(prodRes?.data)) {
+          productsList = prodRes.data;
+        } else if (Array.isArray(prodRes)) {
+          productsList = prodRes;
+        } else if (prodRes?.data && Array.isArray(prodRes.data)) {
+          productsList = prodRes.data;
+        }
+        
+        console.log('Loaded locations:', locationsList.length);
+        console.log('Loaded suppliers:', suppliersList.length);
+        console.log('Loaded products:', productsList.length);
+        
+        setLocations(locationsList);
+        setSuppliers(suppliersList);
+        setProducts(productsList);
       } catch (error) {
         console.error('Failed to fetch data:', error);
-        setError('Failed to load form data');
+        setError('Failed to load form data. Please refresh the page.');
+      } finally {
+        setLoadingData(false);
       }
     };
 
@@ -90,11 +129,44 @@ const NewReceipt = () => {
       setLoading(true);
       setError(null);
 
-      await api.post('/movements/receipt', formData);
-      router.push('/receipts/manage');
+      // Prepare data for backend - remove referenceNo (backend generates it)
+      // Backend expects first productId at root level for single product, but we use lines array
+      const submitData = {
+        supplierId: formData.supplierId,
+        toLocationId: formData.toLocationId,
+        notes: formData.notes || '',
+        lines: formData.lines.filter(line => line.productId && line.quantity > 0).map(line => ({
+          productId: line.productId,
+          quantity: parseInt(line.quantity) || 0,
+          batchId: line.batchId || null,
+        })),
+      };
+
+      // If only one line, also set productId at root (for backward compatibility)
+      if (submitData.lines.length === 1) {
+        submitData.productId = submitData.lines[0].productId;
+      }
+
+      console.log('Submitting receipt data:', submitData);
+      const response = await api.post('/movements/receipts', submitData);
+      console.log('Receipt created:', response);
+      
+      if (response?.ok || response?.data) {
+        router.push('/receipts/manage');
+      } else {
+        throw new Error('Failed to create receipt');
+      }
     } catch (error) {
       console.error('Failed to create receipt:', error);
-      setError(error.response?.data?.error?.message || 'Failed to create receipt');
+      let errorMessage = 'Failed to create receipt';
+      if (error?.payload?.error?.message) {
+        errorMessage = error.payload.error.message;
+      } else if (error?.payload?.message) {
+        errorMessage = error.payload.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -153,15 +225,19 @@ const NewReceipt = () => {
                 value={formData.supplierId}
                 onChange={handleInputChange}
                 required
+                disabled={loadingData}
                 className="input"
               >
-                <option value="">Select supplier</option>
+                <option value="">{loadingData ? 'Loading suppliers...' : 'Select supplier'}</option>
                 {suppliers.map(sup => (
                   <option key={sup.id} value={sup.id}>
                     {sup.name}
                   </option>
                 ))}
               </select>
+              {!loadingData && suppliers.length === 0 && (
+                <p className="text-xs text-warning mt-1">No suppliers found. Please create suppliers first.</p>
+              )}
             </div>
 
             <div>
@@ -173,15 +249,19 @@ const NewReceipt = () => {
                 value={formData.toLocationId}
                 onChange={handleInputChange}
                 required
+                disabled={loadingData}
                 className="input"
               >
-                <option value="">Select location</option>
+                <option value="">{loadingData ? 'Loading locations...' : 'Select location'}</option>
                 {locations.map(loc => (
                   <option key={loc.id} value={loc.id}>
-                    {loc.name}
+                    {loc.name} ({loc.code})
                   </option>
                 ))}
               </select>
+              {!loadingData && locations.length === 0 && (
+                <p className="text-xs text-warning mt-1">No locations found. Please create locations first.</p>
+              )}
             </div>
 
             <div>

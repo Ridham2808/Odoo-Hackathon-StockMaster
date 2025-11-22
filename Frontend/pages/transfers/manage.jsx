@@ -25,12 +25,20 @@ const TransfersManagement = () => {
         setLoading(true);
         setError(null);
         const response = await api.get('/movements?type=TRANSFER');
-        if (response.data) {
-          setTransfers(response.data);
+        console.log('Transfers response:', response.data);
+        
+        // Backend returns { ok: true, data: [...], meta: {...} }
+        let transfersList = [];
+        if (response.data?.ok && Array.isArray(response.data?.data)) {
+          transfersList = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          transfersList = response.data;
         }
+        
+        setTransfers(transfersList);
       } catch (error) {
         console.error('Failed to fetch transfers:', error);
-        setError('Failed to load transfers');
+        setError('Failed to load transfers. Please try again.');
       } finally {
         setLoading(false);
       }

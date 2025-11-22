@@ -55,6 +55,8 @@ export const AuthProvider = ({ children }) => {
         // First check if we have stored auth data
         const storedAuth = getAuthFromStorage();
         if (storedAuth?.user && storedAuth?.token) {
+          // Make sure token is in localStorage for API requests
+          localStorage.setItem('authToken', storedAuth.token);
           setAuthToken(storedAuth.token);
           setUser(storedAuth.user);
           console.log('User restored from storage:', storedAuth.user.email);

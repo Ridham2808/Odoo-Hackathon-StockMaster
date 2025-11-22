@@ -25,12 +25,20 @@ const ReceiptsManagement = () => {
         setLoading(true);
         setError(null);
         const response = await api.get('/movements?type=RECEIPT');
-        if (response.data) {
-          setReceipts(response.data);
+        console.log('Receipts response:', response.data);
+        
+        // Backend returns { ok: true, data: [...], meta: {...} }
+        let receiptsList = [];
+        if (response.data?.ok && Array.isArray(response.data?.data)) {
+          receiptsList = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          receiptsList = response.data;
         }
+        
+        setReceipts(receiptsList);
       } catch (error) {
         console.error('Failed to fetch receipts:', error);
-        setError('Failed to load receipts');
+        setError('Failed to load receipts. Please try again.');
       } finally {
         setLoading(false);
       }

@@ -113,13 +113,14 @@ export class AuthService {
         },
       });
 
+      const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
       const accessToken = jwt.sign(
         {
           sub: user.id,
           email: user.email,
           role: user.role,
         },
-        process.env.JWT_SECRET || 'your-secret-key',
+        jwtSecret,
         { expiresIn: process.env.JWT_EXPIRATION || '15m' },
       );
 

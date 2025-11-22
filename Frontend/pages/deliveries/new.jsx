@@ -10,13 +10,13 @@ const NewDelivery = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [loadingData, setLoadingData] = useState(true);
   const [locations, setLocations] = useState([]);
   const [products, setProducts] = useState([]);
 
   const [formData, setFormData] = useState({
     referenceNo: `DEL-${Date.now()}`,
     fromLocationId: '',
-    toLocationId: '',
     notes: '',
     lines: [{ productId: '', quantity: 0, batchId: '' }],
   });
@@ -30,15 +30,42 @@ const NewDelivery = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoadingData(true);
         const [locRes, prodRes] = await Promise.all([
           api.get('/locations'),
           api.get('/products'),
         ]);
-        setLocations(locRes.data || []);
-        setProducts(prodRes.data || []);
+        
+        // Parse locations - api.js returns response.data, so response is the backend response object
+        let locationsList = [];
+        if (locRes?.ok && Array.isArray(locRes?.data)) {
+          locationsList = locRes.data;
+        } else if (Array.isArray(locRes)) {
+          locationsList = locRes;
+        } else if (locRes?.data && Array.isArray(locRes.data)) {
+          locationsList = locRes.data;
+        }
+        
+        // Parse products
+        let productsList = [];
+        if (prodRes?.ok && Array.isArray(prodRes?.data)) {
+          productsList = prodRes.data;
+        } else if (Array.isArray(prodRes)) {
+          productsList = prodRes;
+        } else if (prodRes?.data && Array.isArray(prodRes.data)) {
+          productsList = prodRes.data;
+        }
+        
+        console.log('Loaded locations:', locationsList.length);
+        console.log('Loaded products:', productsList.length);
+        
+        setLocations(locationsList);
+        setProducts(productsList);
       } catch (error) {
         console.error('Failed to fetch data:', error);
-        setError('Failed to load form data');
+        setError('Failed to load form data. Please refresh the page.');
+      } finally {
+        setLoadingData(false);
       }
     };
 
@@ -87,11 +114,42 @@ const NewDelivery = () => {
       setLoading(true);
       setError(null);
 
-      await api.post('/movements/delivery', formData);
-      router.push('/deliveries/manage');
+      // Prepare data for backend
+      const submitData = {
+        fromLocationId: formData.fromLocationId,
+        notes: formData.notes || '',
+        lines: formData.lines.filter(line => line.productId && line.quantity > 0).map(line => ({
+          productId: line.productId,
+          quantity: parseInt(line.quantity) || 0,
+          batchId: line.batchId || null,
+        })),
+      };
+
+      // If only one line, also set productId at root
+      if (submitData.lines.length === 1) {
+        submitData.productId = submitData.lines[0].productId;
+      }
+
+      console.log('Submitting delivery data:', submitData);
+      const response = await api.post('/movements/deliveries', submitData);
+      console.log('Delivery created:', response);
+      
+      if (response?.ok || response?.data) {
+        router.push('/deliveries/manage');
+      } else {
+        throw new Error('Failed to create delivery');
+      }
     } catch (error) {
       console.error('Failed to create delivery:', error);
-      setError(error.response?.data?.error?.message || 'Failed to create delivery');
+      let errorMessage = 'Failed to create delivery';
+      if (error?.payload?.error?.message) {
+        errorMessage = error.payload.error.message;
+      } else if (error?.payload?.message) {
+        errorMessage = error.payload.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -150,35 +208,19 @@ const NewDelivery = () => {
                 value={formData.fromLocationId}
                 onChange={handleInputChange}
                 required
+                disabled={loadingData}
                 className="input"
               >
-                <option value="">Select location</option>
+                <option value="">{loadingData ? 'Loading locations...' : 'Select location'}</option>
                 {locations.map(loc => (
                   <option key={loc.id} value={loc.id}>
-                    {loc.name}
+                    {loc.name} ({loc.code})
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                To Location *
-              </label>
-              <select
-                name="toLocationId"
-                value={formData.toLocationId}
-                onChange={handleInputChange}
-                required
-                className="input"
-              >
-                <option value="">Select location</option>
-                {locations.map(loc => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
+              {!loadingData && locations.length === 0 && (
+                <p className="text-xs text-warning mt-1">No locations found. Please create locations first.</p>
+              )}
             </div>
 
             <div>

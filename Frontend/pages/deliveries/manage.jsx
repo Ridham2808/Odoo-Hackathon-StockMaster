@@ -25,12 +25,20 @@ const DeliveriesManagement = () => {
         setLoading(true);
         setError(null);
         const response = await api.get('/movements?type=DELIVERY');
-        if (response.data) {
-          setDeliveries(response.data);
+        console.log('Deliveries response:', response.data);
+        
+        // Backend returns { ok: true, data: [...], meta: {...} }
+        let deliveriesList = [];
+        if (response.data?.ok && Array.isArray(response.data?.data)) {
+          deliveriesList = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          deliveriesList = response.data;
         }
+        
+        setDeliveries(deliveriesList);
       } catch (error) {
         console.error('Failed to fetch deliveries:', error);
-        setError('Failed to load deliveries');
+        setError('Failed to load deliveries. Please try again.');
       } finally {
         setLoading(false);
       }

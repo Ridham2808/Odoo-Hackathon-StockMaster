@@ -28,11 +28,14 @@ router.get('/', authMiddleware, async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 20;
     const filters = {
       categoryId: req.query.categoryId,
-      isActive: req.query.isActive === 'true',
+      // Only set isActive if explicitly provided in query
+      isActive: req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined,
       search: req.query.search,
     };
 
+    logger.info(`Fetching products - Page: ${page}, Limit: ${limit}, Filters:`, filters);
     const result = await productsService.getAll(page, limit, filters);
+    logger.info(`Products found: ${result.data.length}, Total: ${result.meta.total}`);
     res.status(200).json(result);
   } catch (error) {
     logger.error('Get all products route error', error);

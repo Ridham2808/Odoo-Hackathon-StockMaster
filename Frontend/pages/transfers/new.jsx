@@ -10,6 +10,7 @@ const NewTransfer = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [loadingData, setLoadingData] = useState(true);
   const [locations, setLocations] = useState([]);
   const [products, setProducts] = useState([]);
 
@@ -30,15 +31,42 @@ const NewTransfer = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoadingData(true);
         const [locRes, prodRes] = await Promise.all([
           api.get('/locations'),
           api.get('/products'),
         ]);
-        setLocations(locRes.data || []);
-        setProducts(prodRes.data || []);
+        
+        // Parse locations - api.js returns response.data, so response is the backend response object
+        let locationsList = [];
+        if (locRes?.ok && Array.isArray(locRes?.data)) {
+          locationsList = locRes.data;
+        } else if (Array.isArray(locRes)) {
+          locationsList = locRes;
+        } else if (locRes?.data && Array.isArray(locRes.data)) {
+          locationsList = locRes.data;
+        }
+        
+        // Parse products
+        let productsList = [];
+        if (prodRes?.ok && Array.isArray(prodRes?.data)) {
+          productsList = prodRes.data;
+        } else if (Array.isArray(prodRes)) {
+          productsList = prodRes;
+        } else if (prodRes?.data && Array.isArray(prodRes.data)) {
+          productsList = prodRes.data;
+        }
+        
+        console.log('Loaded locations:', locationsList.length);
+        console.log('Loaded products:', productsList.length);
+        
+        setLocations(locationsList);
+        setProducts(productsList);
       } catch (error) {
         console.error('Failed to fetch data:', error);
-        setError('Failed to load form data');
+        setError('Failed to load form data. Please refresh the page.');
+      } finally {
+        setLoadingData(false);
       }
     };
 
@@ -87,11 +115,43 @@ const NewTransfer = () => {
       setLoading(true);
       setError(null);
 
-      await api.post('/movements/transfer', formData);
-      router.push('/transfers/manage');
+      // Prepare data for backend
+      const submitData = {
+        fromLocationId: formData.fromLocationId,
+        toLocationId: formData.toLocationId,
+        notes: formData.notes || '',
+        lines: formData.lines.filter(line => line.productId && line.quantity > 0).map(line => ({
+          productId: line.productId,
+          quantity: parseInt(line.quantity) || 0,
+          batchId: line.batchId || null,
+        })),
+      };
+
+      // If only one line, also set productId at root
+      if (submitData.lines.length === 1) {
+        submitData.productId = submitData.lines[0].productId;
+      }
+
+      console.log('Submitting transfer data:', submitData);
+      const response = await api.post('/movements/transfers', submitData);
+      console.log('Transfer created:', response);
+      
+      if (response?.ok || response?.data) {
+        router.push('/transfers/manage');
+      } else {
+        throw new Error('Failed to create transfer');
+      }
     } catch (error) {
       console.error('Failed to create transfer:', error);
-      setError(error.response?.data?.error?.message || 'Failed to create transfer');
+      let errorMessage = 'Failed to create transfer';
+      if (error?.payload?.error?.message) {
+        errorMessage = error.payload.error.message;
+      } else if (error?.payload?.message) {
+        errorMessage = error.payload.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -150,15 +210,19 @@ const NewTransfer = () => {
                 value={formData.fromLocationId}
                 onChange={handleInputChange}
                 required
+                disabled={loadingData}
                 className="input"
               >
-                <option value="">Select location</option>
+                <option value="">{loadingData ? 'Loading locations...' : 'Select location'}</option>
                 {locations.map(loc => (
                   <option key={loc.id} value={loc.id}>
-                    {loc.name}
+                    {loc.name} ({loc.code})
                   </option>
                 ))}
               </select>
+              {!loadingData && locations.length === 0 && (
+                <p className="text-xs text-warning mt-1">No locations found. Please create locations first.</p>
+              )}
             </div>
 
             <div>
@@ -170,15 +234,19 @@ const NewTransfer = () => {
                 value={formData.toLocationId}
                 onChange={handleInputChange}
                 required
+                disabled={loadingData}
                 className="input"
               >
-                <option value="">Select location</option>
+                <option value="">{loadingData ? 'Loading locations...' : 'Select location'}</option>
                 {locations.map(loc => (
                   <option key={loc.id} value={loc.id}>
-                    {loc.name}
+                    {loc.name} ({loc.code})
                   </option>
                 ))}
               </select>
+              {!loadingData && locations.length === 0 && (
+                <p className="text-xs text-warning mt-1">No locations found. Please create locations first.</p>
+              )}
             </div>
 
             <div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@lib/auth-context';
+import Image from 'next/image';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 
 const Login = () => {
@@ -39,12 +40,16 @@ const Login = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">C</span>
-            </div>
+            <Image 
+              src="/Logo.png" 
+              alt="StockMaster Logo" 
+              width={64} 
+              height={64}
+              className="rounded-lg shadow-lg"
+            />
           </div>
           <h1 className="text-2xl font-bold text-neutral-900">Welcome Back</h1>
-          <p className="text-neutral-600 mt-2">Sign in to your Comet IMS account</p>
+          <p className="text-neutral-600 mt-2">Sign in to your StockMaster account</p>
         </div>
 
         {/* Form */}
@@ -57,61 +62,50 @@ const Login = () => {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-2">Email</label>
+            <label className="block text-sm font-semibold text-neutral-800 mb-3">Email Address</label>
             <div className="relative">
-              <Mail size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
+              <Mail size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400" />
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="you@example.com"
-                className="input pl-10"
+                placeholder="Enter your email"
+                className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-neutral-900 placeholder-neutral-400 transition-all"
                 required
               />
             </div>
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-neutral-700">Password</label>
-              <Link href="/auth/forgot-password" className="text-sm text-primary hover:text-primary-dark">
-                Forgot?
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-sm font-semibold text-neutral-800">Password</label>
+              <Link href="/auth/forgot-password" className="text-sm text-primary hover:text-primary-dark font-medium transition-colors">
+                Forgot Password?
               </Link>
             </div>
             <div className="relative">
-              <Lock size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
+              <Lock size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400" />
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="••••••••"
-                className="input pl-10"
+                placeholder="Enter your password"
+                className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-neutral-900 placeholder-neutral-400 transition-all"
                 required
               />
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="btn btn-primary w-full py-3">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full py-3 mt-2 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-primary/30 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105"
+          >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        {/* Demo Credentials */}
-        <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-          <p className="text-xs font-semibold text-primary mb-3">TEST CREDENTIALS</p>
-          <div className="space-y-2 text-xs">
-            <div>
-              <p className="text-neutral-600">Inventory Manager:</p>
-              <p className="font-mono text-neutral-700">yasark8850@gmail.com / TestUser@123</p>
-            </div>
-            <div>
-              <p className="text-neutral-600">Admin (StockMaster):</p>
-              <p className="font-mono text-neutral-700">stockmaster@example.com / StockMaster@123</p>
-            </div>
-          </div>
-        </div>
 
         {/* Footer */}
         <div className="text-center text-neutral-600 mt-6 space-y-2">

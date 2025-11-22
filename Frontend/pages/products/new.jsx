@@ -33,9 +33,21 @@ const NewProduct = () => {
     const fetchCategories = async () => {
       try {
         const response = await api.get('/products/categories/list');
-        if (response.data) {
-          setCategories(response.data || []);
+        console.log('Categories response:', response);
+        
+        // Backend returns { ok: true, data: [...] }
+        // api.js interceptor returns response.data, so response is the backend response object
+        let categoriesList = [];
+        if (response?.ok && Array.isArray(response?.data)) {
+          categoriesList = response.data;
+        } else if (Array.isArray(response)) {
+          categoriesList = response;
+        } else if (response?.data && Array.isArray(response.data)) {
+          categoriesList = response.data;
         }
+        
+        console.log('Parsed categories:', categoriesList);
+        setCategories(categoriesList);
       } catch (error) {
         console.warn('Categories not available:', error);
         setCategories([]);
@@ -61,11 +73,28 @@ const NewProduct = () => {
       setLoading(true);
       setError(null);
 
-      await api.post('/products', formData);
-      router.push('/products/manage');
+      console.log('Creating product with data:', formData);
+      const response = await api.post('/products', formData);
+      console.log('Product creation response:', response);
+      
+      // Check if creation was successful
+      if (response?.ok || response?.data) {
+        // Redirect to products list
+        router.push('/products/manage');
+      } else {
+        throw new Error('Product creation failed');
+      }
     } catch (error) {
       console.error('Failed to create product:', error);
-      setError(error.response?.data?.error?.message || 'Failed to create product');
+      let errorMessage = 'Failed to create product';
+      if (error?.payload?.error?.message) {
+        errorMessage = error.payload.error.message;
+      } else if (error?.payload?.message) {
+        errorMessage = error.payload.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

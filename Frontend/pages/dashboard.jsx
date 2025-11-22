@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import Image from 'next/image';
 import { useAuth } from '@lib/auth-context';
 import { api } from '@lib/api';
 import KPICard from '@components/KPICard';
 import DataTable from '@components/DataTable';
-import { Package, AlertCircle, Truck, TrendingUp, Clock, CheckCircle } from 'lucide-react';
+import { Package, AlertCircle, Truck, TrendingUp, Clock, CheckCircle, ArrowRightLeft } from 'lucide-react';
 
 const Dashboard = () => {
   const router = useRouter();
@@ -29,32 +30,64 @@ const Dashboard = () => {
         setLoading(true);
         setError(null);
 
-        // Fetch KPIs
-        const kpisResponse = await api.get('/dashboard/kpis');
-        if (kpisResponse.data) {
-          setKpis(kpisResponse.data);
+        // Fetch all data in parallel with proper response parsing
+        const [kpisRes, movementsRes, alertsRes, operationsRes] = await Promise.all([
+          api.get('/dashboard/kpis').catch(e => ({ ok: false, error: e })),
+          api.get('/dashboard/recent-movements?limit=10').catch(e => ({ ok: false, error: e })),
+          api.get('/dashboard/low-stock-alerts').catch(e => ({ ok: false, error: e })),
+          api.get('/dashboard/pending-operations').catch(e => ({ ok: false, error: e })),
+        ]);
+
+        // Parse KPIs - api.js returns response.data, so response is already the backend response
+        if (kpisRes?.ok && kpisRes?.data) {
+          setKpis(kpisRes.data);
+        } else if (kpisRes && !kpisRes.error && !kpisRes.ok) {
+          // Direct data without wrapper
+          setKpis(kpisRes);
         }
 
-        // Fetch recent movements
-        const movementsResponse = await api.get('/dashboard/recent-movements?limit=10');
-        if (movementsResponse.data) {
-          setRecentMovements(movementsResponse.data);
+        // Parse movements
+        let movementsList = [];
+        if (movementsRes?.ok && Array.isArray(movementsRes?.data)) {
+          movementsList = movementsRes.data;
+        } else if (Array.isArray(movementsRes)) {
+          movementsList = movementsRes;
+        } else if (movementsRes?.data && Array.isArray(movementsRes.data)) {
+          movementsList = movementsRes.data;
         }
+        setRecentMovements(movementsList);
 
-        // Fetch low stock alerts
-        const alertsResponse = await api.get('/dashboard/low-stock-alerts');
-        if (alertsResponse.data) {
-          setLowStockAlerts(alertsResponse.data.slice(0, 5));
+        // Parse alerts
+        let alertsList = [];
+        if (alertsRes?.ok && Array.isArray(alertsRes?.data)) {
+          alertsList = alertsRes.data.slice(0, 5);
+        } else if (Array.isArray(alertsRes)) {
+          alertsList = alertsRes.slice(0, 5);
+        } else if (alertsRes?.data && Array.isArray(alertsRes.data)) {
+          alertsList = alertsRes.data.slice(0, 5);
         }
+        setLowStockAlerts(alertsList);
 
-        // Fetch pending operations
-        const operationsResponse = await api.get('/dashboard/pending-operations');
-        if (operationsResponse.data) {
-          setPendingOperations(operationsResponse.data);
+        // Parse operations
+        if (operationsRes?.ok && operationsRes?.data) {
+          setPendingOperations(operationsRes.data);
+        } else if (operationsRes && !operationsRes.error) {
+          setPendingOperations(operationsRes);
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
-        setError('Failed to load dashboard data');
+        setError('Failed to load dashboard data. Please refresh the page.');
+        // Set default values if API fails
+        if (!kpis) {
+          setKpis({
+            totalProducts: 0,
+            lowStockItems: 0,
+            outOfStock: 0,
+            pendingReceipts: 0,
+            pendingDeliveries: 0,
+            internalTransfers: 0,
+          });
+        }
       } finally {
         setLoading(false);
       }
@@ -62,8 +95,8 @@ const Dashboard = () => {
 
     if (isAuthenticated) {
       fetchDashboardData();
-      // Refresh data every 30 seconds
-      const interval = setInterval(fetchDashboardData, 30000);
+      // Refresh data every 60 seconds (increased from 30 to reduce rate limiting)
+      const interval = setInterval(fetchDashboardData, 60000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
@@ -84,21 +117,37 @@ const Dashboard = () => {
     <div className="space-y-8">
       {/* Page Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Dashboard</h1>
-          <p className="text-neutral-600 mt-1">Welcome back! Here's your inventory overview.</p>
+        <div className="flex items-center gap-4">
+          <Image 
+            src="/Logo.png" 
+            alt="StockMaster Logo" 
+            width={56} 
+            height={56}
+            className="rounded-lg shadow-md"
+          />
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-900">StockMaster Dashboard</h1>
+            <p className="text-neutral-600 mt-1">Welcome back! Here's your inventory overview.</p>
+          </div>
         </div>
         <Link href="/products/new" className="btn btn-primary">
           + New Product
         </Link>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">
+          {error}
+        </div>
+      )}
+
       {/* KPI Cards */}
       {kpis && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <KPICard
             title="Total Products in Stock"
-            value={kpis.totalProducts.toLocaleString()}
+            value={(kpis.totalProducts || 0).toLocaleString()}
             icon={Package}
             color="primary"
             trend={5}
@@ -106,18 +155,40 @@ const Dashboard = () => {
           />
           <KPICard
             title="Low / Out of Stock"
-            value={kpis.lowStockItems + kpis.outOfStock}
+            value={((kpis.lowStockItems || 0) + (kpis.outOfStock || 0)).toLocaleString()}
             icon={AlertCircle}
             color="danger"
             trend={-2}
             trendLabel="vs last month"
           />
           <KPICard
-            title="Pending Operations"
-            value={kpis.pendingReceipts + kpis.pendingDeliveries}
+            title="Pending Receipts"
+            value={(kpis.pendingReceipts || 0).toLocaleString()}
             icon={Truck}
             color="warning"
             trend={12}
+            trendLabel="vs last month"
+          />
+          <KPICard
+            title="Pending Deliveries"
+            value={(kpis.pendingDeliveries || 0).toLocaleString()}
+            icon={Truck}
+            color="secondary"
+            trend={8}
+            trendLabel="vs last month"
+          />
+        </div>
+      )}
+      
+      {/* Additional KPIs Row */}
+      {kpis && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <KPICard
+            title="Internal Transfers Scheduled"
+            value={(kpis.internalTransfers || 0).toLocaleString()}
+            icon={ArrowRightLeft}
+            color="warning"
+            trend={3}
             trendLabel="vs last month"
           />
         </div>

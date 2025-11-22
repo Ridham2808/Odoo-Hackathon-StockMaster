@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@lib/auth-context';
+import Image from 'next/image';
 import { User, Mail, Lock, AlertCircle } from 'lucide-react';
 
 const Signup = () => {
@@ -58,12 +59,16 @@ const Signup = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">C</span>
-            </div>
+            <Image 
+              src="/Logo.png" 
+              alt="StockMaster Logo" 
+              width={64} 
+              height={64}
+              className="rounded-lg shadow-lg"
+            />
           </div>
           <h1 className="text-2xl font-bold text-neutral-900">Create Account</h1>
-          <p className="text-neutral-600 mt-2">Join Comet IMS today</p>
+          <p className="text-neutral-600 mt-2">Join StockMaster today</p>
         </div>
 
         {/* Form */}
@@ -77,31 +82,31 @@ const Signup = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">First Name</label>
+              <label className="block text-sm font-semibold text-neutral-800 mb-3">First Name</label>
               <div className="relative">
-                <User size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
+                <User size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400" />
                 <input
                   type="text"
                   name="firstName"
                   value={formData.firstName}
                   onChange={handleChange}
                   placeholder="John"
-                  className="input pl-10"
+                  className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-neutral-900 placeholder-neutral-400 transition-all"
                   required
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">Last Name</label>
+              <label className="block text-sm font-semibold text-neutral-800 mb-3">Last Name</label>
               <div className="relative">
-                <User size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
+                <User size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400" />
                 <input
                   type="text"
                   name="lastName"
                   value={formData.lastName}
                   onChange={handleChange}
                   placeholder="Doe"
-                  className="input pl-10"
+                  className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-neutral-900 placeholder-neutral-400 transition-all"
                   required
                 />
               </div>
@@ -109,54 +114,58 @@ const Signup = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-2">Email</label>
+            <label className="block text-sm font-semibold text-neutral-800 mb-3">Email Address</label>
             <div className="relative">
-              <Mail size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
+              <Mail size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400" />
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="you@example.com"
-                className="input pl-10"
+                placeholder="Enter your email"
+                className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-neutral-900 placeholder-neutral-400 transition-all"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-2">Password</label>
+            <label className="block text-sm font-semibold text-neutral-800 mb-3">Password</label>
             <div className="relative">
-              <Lock size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
+              <Lock size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400" />
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="••••••••"
-                className="input pl-10"
+                placeholder="Enter your password"
+                className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-neutral-900 placeholder-neutral-400 transition-all"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-2">Confirm Password</label>
+            <label className="block text-sm font-semibold text-neutral-800 mb-3">Confirm Password</label>
             <div className="relative">
-              <Lock size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
+              <Lock size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-400" />
               <input
                 type="password"
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                placeholder="••••••••"
-                className="input pl-10"
+                placeholder="Confirm your password"
+                className="w-full pl-12 pr-4 py-3 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white text-neutral-900 placeholder-neutral-400 transition-all"
                 required
               />
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="btn btn-primary w-full py-3">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full py-3 mt-2 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-primary/30 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105"
+          >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
         </form>

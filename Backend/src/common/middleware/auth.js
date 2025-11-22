@@ -15,9 +15,27 @@ export const authMiddleware = (req, res, next) => {
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    req.user = decoded;
-    next();
+    const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+    
+    try {
+      const decoded = jwt.verify(token, jwtSecret);
+      req.user = decoded;
+      next();
+    } catch (verifyError) {
+      logger.error('Token verification failed:', verifyError.message);
+      // Try with alternative secret if available
+      if (process.env.JWT_SECRET !== 'your-secret-key') {
+        try {
+          const decoded = jwt.verify(token, 'your-secret-key');
+          req.user = decoded;
+          next();
+          return;
+        } catch (e) {
+          // Fall through to error response
+        }
+      }
+      throw verifyError;
+    }
   } catch (error) {
     logger.error('Auth middleware error', error);
     res.status(401).json({

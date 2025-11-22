@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@lib/auth-context';
 import { api } from '@lib/api';
 import DataTable from '@components/DataTable';
-import { Plus, Edit2, Trash2, Search, Filter } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Filter, RefreshCw } from 'lucide-react';
 
 const ProductsManagement = () => {
   const router = useRouter();
@@ -15,6 +15,7 @@ const ProductsManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [meta, setMeta] = useState(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -27,23 +28,57 @@ const ProductsManagement = () => {
       try {
         setLoading(true);
         setError(null);
+        console.log('Fetching products...');
         const response = await api.get('/products');
-        console.log('Products response:', response);
+        console.log('Products API response:', JSON.stringify(response, null, 2));
         
         // Backend returns { ok: true, data: [...], meta: {...} }
+        // api.js interceptor returns response.data, so response is the backend response object
         let productsList = [];
-        if (response.data?.ok && Array.isArray(response.data?.data)) {
-          productsList = response.data.data;
-        } else if (Array.isArray(response.data)) {
-          productsList = response.data;
+        
+        // Check if response indicates an error
+        if (response && response.ok === false) {
+          throw new Error(response.error?.message || 'Failed to fetch products');
         }
         
-        console.log('Parsed products:', productsList);
+        if (response && response.ok && Array.isArray(response.data)) {
+          // Standard backend response format
+          productsList = response.data;
+          setMeta(response.meta || null);
+          console.log(`Loaded ${productsList.length} products from backend. Total: ${response.meta?.total || 0}`);
+        } else if (Array.isArray(response)) {
+          // Direct array response (fallback)
+          productsList = response;
+          console.log(`Loaded ${productsList.length} products (direct array)`);
+        } else if (response && response.data && Array.isArray(response.data)) {
+          // Nested data (fallback)
+          productsList = response.data;
+          console.log(`Loaded ${productsList.length} products (nested data)`);
+        } else {
+          console.warn('Unexpected response format:', response);
+          productsList = [];
+        }
+        
+        console.log('Final products list:', productsList);
         setProducts(productsList);
         setFilteredProducts(productsList);
       } catch (error) {
         console.error('Failed to fetch products:', error);
-        setError('Failed to load products');
+        console.error('Error details:', error);
+        
+        // Handle different error formats
+        let errorMessage = 'Failed to load products. Please try again.';
+        if (error?.payload?.error?.message) {
+          errorMessage = error.payload.error.message;
+        } else if (error?.payload?.message) {
+          errorMessage = error.payload.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        } else if (error?.response?.data?.error?.message) {
+          errorMessage = error.response.data.error.message;
+        }
+        
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -91,9 +126,46 @@ const ProductsManagement = () => {
           <h1 className="text-3xl font-bold text-neutral-900">Products</h1>
           <p className="text-neutral-600 mt-1">Manage your inventory products</p>
         </div>
-        <Link href="/products/new" className="btn btn-primary flex items-center gap-2">
-          <Plus size={20} /> New Product
-        </Link>
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              setLoading(true);
+              const fetchProducts = async () => {
+                try {
+                  setError(null);
+                  console.log('Refreshing products...');
+                  const response = await api.get('/products');
+                  console.log('Products API response:', JSON.stringify(response, null, 2));
+                  
+                  let productsList = [];
+                  if (response && response.ok && Array.isArray(response.data)) {
+                    productsList = response.data;
+                    console.log(`Loaded ${productsList.length} products from backend`);
+                  } else if (Array.isArray(response)) {
+                    productsList = response;
+                  } else if (response && response.data && Array.isArray(response.data)) {
+                    productsList = response.data;
+                  }
+                  
+                  setProducts(productsList);
+                  setFilteredProducts(productsList);
+                } catch (error) {
+                  console.error('Failed to refresh products:', error);
+                } finally {
+                  setLoading(false);
+                }
+              };
+              fetchProducts();
+            }}
+            disabled={loading}
+            className="btn btn-outline flex items-center gap-2"
+          >
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+          <Link href="/products/new" className="btn btn-primary flex items-center gap-2">
+            <Plus size={20} /> New Product
+          </Link>
+        </div>
       </div>
 
       {/* Search and Filter */}
@@ -119,7 +191,22 @@ const ProductsManagement = () => {
       <div className="card-lg p-6">
         {error && (
           <div className="p-4 bg-danger/10 border border-danger/20 rounded-lg mb-4 text-danger text-sm">
-            {error}
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+        
+        {!loading && !error && products.length === 0 && (
+          <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg mb-4 text-warning text-sm">
+            <strong>Info:</strong> No products found in the database. 
+            {meta && meta.total === 0 && ' The database appears to be empty. '}
+            {meta && meta.total > 0 && ` Found ${meta.total} products but they may be filtered out. `}
+            Create your first product to get started, or check backend logs for details.
+          </div>
+        )}
+        
+        {!loading && !error && products.length > 0 && meta && (
+          <div className="mb-4 text-sm text-neutral-600">
+            Showing {products.length} of {meta.total} products
           </div>
         )}
         
@@ -154,10 +241,10 @@ const ProductsManagement = () => {
                   <tr key={product.id} className="border-b border-neutral-100 hover:bg-neutral-50">
                     <td className="py-3 px-4 text-neutral-900 font-medium">{product.sku}</td>
                     <td className="py-3 px-4 text-neutral-900">{product.name}</td>
-                    <td className="py-3 px-4 text-neutral-600">{product.category || '-'}</td>
-                    <td className="py-3 px-4 text-neutral-600">{product.minStockLevel}</td>
-                    <td className="py-3 px-4 text-neutral-600">{product.reorderPoint}</td>
-                    <td className="py-3 px-4 text-neutral-900 font-medium">${product.unitPrice.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-neutral-600">{product.category?.name || product.category || '-'}</td>
+                    <td className="py-3 px-4 text-neutral-600">{product.minStockLevel || '-'}</td>
+                    <td className="py-3 px-4 text-neutral-600">{product.reorderPoint || '-'}</td>
+                    <td className="py-3 px-4 text-neutral-900 font-medium">${(product.unitPrice || 0).toFixed(2)}</td>
                     <td className="py-3 px-4">
                       <div className="flex gap-2">
                         <Link href={`/products/${product.id}`} className="p-2 hover:bg-primary/10 rounded-lg text-primary">

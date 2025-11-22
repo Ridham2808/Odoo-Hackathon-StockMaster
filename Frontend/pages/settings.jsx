@@ -1,19 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@lib/auth-context';
-import { Settings, Key, Bell, Shield } from 'lucide-react';
+import { api } from '@lib/api';
+import { Settings, Key, Bell, Shield, Warehouse, Plus, Edit2, Trash2 } from 'lucide-react';
 
 const SettingsPage = () => {
   const { isAuthenticated, user } = useAuth();
   const [activeTab, setActiveTab] = useState('account');
+  const [locations, setLocations] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   if (!isAuthenticated) return null;
 
   const tabs = [
     { id: 'account', label: 'Account', icon: Settings },
+    { id: 'warehouse', label: 'Warehouse', icon: Warehouse },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'api', label: 'API Keys', icon: Key },
   ];
+
+  useEffect(() => {
+    if (activeTab === 'warehouse' && isAuthenticated) {
+      fetchLocations();
+    }
+  }, [activeTab, isAuthenticated]);
+
+  const fetchLocations = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/locations');
+      let locationsList = [];
+      if (response?.ok && Array.isArray(response?.data)) {
+        locationsList = response.data;
+      } else if (Array.isArray(response)) {
+        locationsList = response;
+      } else if (response?.data && Array.isArray(response.data)) {
+        locationsList = response.data;
+      }
+      setLocations(locationsList);
+    } catch (error) {
+      console.error('Failed to fetch locations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -97,6 +128,44 @@ const SettingsPage = () => {
                   </label>
                   <button className="btn btn-primary">Save Preferences</button>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'warehouse' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-neutral-900">Warehouse Management</h2>
+                  <Link href="/locations/new" className="btn btn-primary flex items-center gap-2">
+                    <Plus size={18} /> New Warehouse
+                  </Link>
+                </div>
+                {loading ? (
+                  <div className="text-center py-8 text-neutral-600">Loading warehouses...</div>
+                ) : locations.length === 0 ? (
+                  <div className="text-center py-8 text-neutral-600">
+                    No warehouses found. Create your first warehouse to get started.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {locations.map((location) => (
+                      <div key={location.id} className="card p-4 flex items-center justify-between">
+                        <div>
+                          <h3 className="font-bold text-neutral-900">{location.name}</h3>
+                          <p className="text-sm text-neutral-600">{location.code}</p>
+                          <p className="text-sm text-neutral-500">{location.address || location.type}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Link
+                            href={`/locations/${location.id}`}
+                            className="p-2 hover:bg-primary/10 rounded-lg text-primary"
+                          >
+                            <Edit2 size={18} />
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
